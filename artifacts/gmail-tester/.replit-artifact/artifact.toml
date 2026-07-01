@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "Gmail API Tester"
+version = "1.0.0"
+id = "artifacts/gmail-tester"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19098
+
+[services.development]
+run = "pnpm --filter @workspace/gmail-tester run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/gmail-tester", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/gmail-tester/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19098"
+BASE_PATH = "/"

@@ -1,0 +1,363 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: gmail
+    description: Gmail API operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /gmail/credentials:
+    post:
+      operationId: uploadCredentials
+      tags: [gmail]
+      summary: Upload Google OAuth credentials JSON
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CredentialsInput"
+      responses:
+        "200":
+          description: Credentials saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationResult"
+        "400":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResult"
+
+  /gmail/auth/start:
+    get:
+      operationId: startAuth
+      tags: [gmail]
+      summary: Start OAuth flow, returns auth URL
+      responses:
+        "200":
+          description: Auth URL generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthStartResult"
+        "400":
+          description: No credentials loaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResult"
+
+  /gmail/auth/callback:
+    get:
+      operationId: authCallback
+      tags: [gmail]
+      summary: OAuth 2.0 callback endpoint
+      parameters:
+        - in: query
+          name: code
+          schema:
+            type: string
+        - in: query
+          name: error
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect after auth
+        "200":
+          description: Auth complete HTML page
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /gmail/auth/status:
+    get:
+      operationId: getAuthStatus
+      tags: [gmail]
+      summary: Get current authentication status
+      responses:
+        "200":
+          description: Auth status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthStatus"
+
+  /gmail/auth/logout:
+    delete:
+      operationId: logout
+      tags: [gmail]
+      summary: Clear stored token
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationResult"
+
+  /gmail/token-info:
+    get:
+      operationId: getTokenInfo
+      tags: [gmail]
+      summary: Get token info including email and scopes
+      responses:
+        "200":
+          description: Token information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenInfo"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResult"
+
+  /gmail/test:
+    get:
+      operationId: testConnection
+      tags: [gmail]
+      summary: Test Gmail API connection
+      responses:
+        "200":
+          description: Connection test result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestResult"
+
+  /gmail/send:
+    post:
+      operationId: sendEmail
+      tags: [gmail]
+      summary: Send an email via Gmail API
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailInput"
+      responses:
+        "200":
+          description: Email sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SendResult"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResult"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResult"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    CredentialsInput:
+      type: object
+      properties:
+        credentials:
+          type: object
+          description: Raw Google OAuth credentials JSON content
+      required:
+        - credentials
+
+    EmailInput:
+      type: object
+      properties:
+        from:
+          type: string
+        to:
+          type: string
+        subject:
+          type: string
+        body:
+          type: string
+      required:
+        - from
+        - to
+        - subject
+        - body
+
+    OperationResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        logs:
+          type: array
+          items:
+            $ref: "#/components/schemas/LogEntry"
+      required:
+        - success
+        - message
+        - logs
+
+    ErrorResult:
+      type: object
+      properties:
+        error:
+          type: string
+        logs:
+          type: array
+          items:
+            $ref: "#/components/schemas/LogEntry"
+      required:
+        - error
+        - logs
+
+    AuthStartResult:
+      type: object
+      properties:
+        authUrl:
+          type: string
+        logs:
+          type: array
+          items:
+            $ref: "#/components/schemas/LogEntry"
+      required:
+        - authUrl
+        - logs
+
+    AuthStatus:
+      type: object
+      properties:
+        authenticated:
+          type: boolean
+        hasCredentials:
+          type: boolean
+        email:
+          type: ["string", "null"]
+        expiresAt:
+          type: ["string", "null"]
+        logs:
+          type: array
+          items:
+            $ref: "#/components/schemas/LogEntry"
+      required:
+        - authenticated
+        - hasCredentials
+        - logs
+
+    TokenInfo:
+      type: object
+      properties:
+        email:
+          type: string
+        scopes:
+          type: array
+          items:
+            type: string
+        expiresAt:
+          type: ["string", "null"]
+        tokenType:
+          type: ["string", "null"]
+        logs:
+          type: array
+          items:
+            $ref: "#/components/schemas/LogEntry"
+      required:
+        - email
+        - scopes
+        - logs
+
+    TestResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        details:
+          type: object
+          properties:
+            email:
+              type: string
+            messagesTotal:
+              type: ["integer", "null"]
+          required:
+            - email
+        logs:
+          type: array
+          items:
+            $ref: "#/components/schemas/LogEntry"
+      required:
+        - success
+        - message
+        - logs
+
+    SendResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        messageId:
+          type: ["string", "null"]
+        httpStatus:
+          type: integer
+        logs:
+          type: array
+          items:
+            $ref: "#/components/schemas/LogEntry"
+      required:
+        - success
+        - httpStatus
+        - logs
+
+    LogEntry:
+      type: object
+      properties:
+        level:
+          type: string
+          enum: [info, success, error, warning, debug]
+        message:
+          type: string
+        timestamp:
+          type: string
+      required:
+        - level
+        - message
+        - timestamp
